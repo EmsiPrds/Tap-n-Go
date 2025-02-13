@@ -1,0 +1,27 @@
+.init {
+  $ taskkill /F /IM node.exe
+  $ code .
+}
+dev {
+  $ wr http://localhost:3000
+  + cd tng-backend && npm run dev
+  + cd tng-frontend && npm run dev
+}
+
+build {
+  + cd tng-backend && npm run build
+  + cd tng-frontend && npm run build
+
+}
+
+publish {
+  + cd tng-backend && npm run publish
+  + cd tng-frontend && npm run publish
+
+}
+
+
+share {
+  + sshtunnel
+  + code serve-web --host 0.0.0.0 --port 5000 --without-connection-token --accept-server-license-terms
+}
