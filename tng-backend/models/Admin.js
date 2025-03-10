@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const adminSchema = new mongoose.Schema({
+const adminSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true }
 });
 
-module.exports = mongoose.model('Admin', adminSchema);  // This should create 'admins' collection
+export default model('Admin', adminSchema);  // This should create 'admins' collection

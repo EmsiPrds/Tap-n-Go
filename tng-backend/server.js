@@ -1,8 +1,8 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const authRoutes = require('./routes/auth');
-const employeeRoutes = require('./routes/employee');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import authRoutes from './routes/auth.js';
+import employeeRoutes from './routes/employee.js';
 
 const app = express();
 app.use(cors());
@@ -10,11 +10,13 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 
-
-// MongoDB Connection
+// MongoDB Connection without deprecated options
 mongoose.connect('mongodb://127.0.0.1:27017/TapNGoDB')
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+  .catch((err) => {
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);  // Exit process with failure
+  });
 
 // Default Route
 app.get('/', (req, res) => {

@@ -1,38 +1,45 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import Admin from "../models/Admin.js"; // Ensure the correct path and `.js` extension
 
-const router = express.Router();  // Initialize the router here
+dotenv.config(); // Load environment variables
+
+const router = express.Router();
 
 // Admin Login Route
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res) => {
     const { username, password } = req.body;
-    console.log('Login attempt:', { username, password });  // Debug log
+    console.log("Login attempt:", { username });
 
     try {
+        // Find admin by username
         const admin = await Admin.findOne({ username });
-        console.log('Admin from DB:', admin);  // Debug log
+        console.log("Admin from DB:", admin);
 
         if (!admin) {
-            console.log('Admin not found');
-            return res.status(400).json({ message: 'Invalid username or password' });
+            console.log("Admin not found");
+            return res.status(400).json({ message: "Invalid username or password" });
         }
 
+        // Compare passwords
         const isMatch = await bcrypt.compare(password, admin.password);
-        console.log('Password match:', isMatch);  // Debug log
+        console.log("Password match:", isMatch);
 
         if (!isMatch) {
-            console.log('Password mismatch');
-            return res.status(400).json({ message: 'Invalid username or password' });
+            console.log("Password mismatch");
+            return res.status(400).json({ message: "Invalid username or password" });
         }
 
-        const token = jwt.sign({ id: admin._id }, 'your_secret_key_here', { expiresIn: '1d' });
+        // Generate JWT token
+        const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
         res.json({ token });
     } catch (err) {
-        console.log('Server error:', err);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Server error:", err.message);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 });
 
-module.exports = router;  // Export the router
+export default router; // Export the router correctly
