@@ -1,34 +1,61 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const Admin = require('./models/Admin');
+require("dotenv").config();
+const mongoose = require("mongoose");
+const Admin = require("./models/Admin");
 
-// Connect to MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/TapNGoDB')
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.log(err));
+// Configuration
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/TapNGoDB";
+const DEFAULT_ADMIN_USERNAME = process.env.DEFAULT_ADMIN_USERNAME || "admin";
+const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "123";
 
-// Create Admin User
-const createAdmin = async () => {
-    const username = 'admin';
-    const plainPassword = '123';  // This will be the login password
+/**
+ * Create default admin user
+ * This script creates the default admin user if it doesn't exist
+ */
+const createDefaultAdmin = async () => {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(MONGODB_URI);
+    console.log("✓ MongoDB connected");
 
-    const existingAdmin = await Admin.findOne({ username });
+    // Check if admin already exists
+    const existingAdmin = await Admin.findOne({
+      username: DEFAULT_ADMIN_USERNAME,
+    });
+
     if (existingAdmin) {
-        console.log('Admin already exists');
-        mongoose.disconnect();
-        return;
+      console.log(`✓ Admin user '${DEFAULT_ADMIN_USERNAME}' already exists`);
+      console.log("  No action needed.");
+      await mongoose.disconnect();
+      return;
     }
 
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
+    // Create new admin (password will be hashed by pre-save hook)
     const newAdmin = new Admin({
-        username: username,
-        password: hashedPassword
+      username: DEFAULT_ADMIN_USERNAME,
+      password: DEFAULT_ADMIN_PASSWORD, // Pre-save hook will hash this
+      isActive: true,
     });
 
     await newAdmin.save();
-    console.log('Admin created successfully');
-    mongoose.disconnect();  // Close connection after creation
+
+    console.log("✓ Default admin user created successfully!");
+    console.log(`  Username: ${DEFAULT_ADMIN_USERNAME}`);
+    console.log(`  Password: ${DEFAULT_ADMIN_PASSWORD}`);
+    console.log(
+      "\n⚠️  IMPORTANT: Change the default password after first login!"
+    );
+
+    await mongoose.disconnect();
+    console.log("✓ Database connection closed");
+  } catch (error) {
+    console.error("✗ Error creating admin user:", error.message);
+    if (error.code === 11000) {
+      console.error("  Admin user already exists (duplicate key error)");
+    }
+    process.exit(1);
+  }
 };
 
-createAdmin();
+// Run the script
+createDefaultAdmin();

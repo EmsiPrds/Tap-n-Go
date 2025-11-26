@@ -1,19 +1,39 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AdminLogin from './pages/AdminLogin';
-import Dashboard from './pages/Dashboard';  // We'll create this later
+import { useState } from "react";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SplashScreen from "./components/SplashScreen";
+import AdminLogin from "./pages/AdminLogin";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
-    const token = localStorage.getItem('authToken');  // Check if token exists
+  const [showSplash, setShowSplash] = useState(true);
 
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
-                <Route path="/login" element={<AdminLogin />} />
-                <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
-            </Routes>
-        </Router>
-    );
+  return (
+    <>
+      <Router>
+        <Routes>
+          <Route path="/" element={<AdminLogin />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+      {showSplash && (
+        <SplashScreen onComplete={() => setShowSplash(false)} duration={2000} />
+      )}
+    </>
+  );
 }
 
 export default App;
