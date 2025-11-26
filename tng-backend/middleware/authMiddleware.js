@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 
@@ -22,6 +23,14 @@ const extractToken = (req) => {
     // Fallback to cookie
     return req.cookies?.accessToken || null;
 };
+=======
+// authMiddleware.js
+import jwt from 'jsonwebtoken';  // Default import for CommonJS modules
+
+const verifyToken = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
+>>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
 
 /**
  * Verify JWT access token middleware
@@ -29,6 +38,7 @@ const extractToken = (req) => {
  */
 const verifyToken = async (req, res, next) => {
     try {
+<<<<<<< HEAD
         const token = extractToken(req);
 
         if (!token) {
@@ -171,3 +181,14 @@ module.exports = {
     verifyRefreshToken,
     extractToken
 };
+=======
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Access verify method from jwt
+        req.admin = decoded;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid token' });
+    }
+};
+
+export default verifyToken;
+>>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00

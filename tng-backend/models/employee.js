@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const employeeSchema = new mongoose.Schema({
+const employeeSchema = new Schema({
     name: { type: String, required: true },
     position: { type: String, required: true },  // Ensure position is included and required
 });
 
-module.exports = mongoose.model('Employee', employeeSchema);
+export default model('Employee', employeeSchema);
