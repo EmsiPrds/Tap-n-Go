@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const adminSchema = new mongoose.Schema({
     username: {
@@ -131,14 +130,4 @@ adminSchema.methods.resetLoginAttempts = async function() {
 
 const Admin = mongoose.model('Admin', adminSchema);
 
-module.exports = Admin;
-=======
-import { Schema, model } from 'mongoose';
-
-const adminSchema = new Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
-});
-
-export default model('Admin', adminSchema);  // This should create 'admins' collection
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
+export default Admin;

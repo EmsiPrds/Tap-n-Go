@@ -1,18 +1,10 @@
-<<<<<<< HEAD
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const authRoutes = require('./routes/auth');
-const employeeRoutes = require('./routes/employee');
-=======
+import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
 
 const app = express();
 
@@ -40,21 +32,14 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 
-<<<<<<< HEAD
 // MongoDB Connection
 const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/TapNGoDB';
 mongoose.connect(mongoURI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-=======
-// MongoDB Connection without deprecated options
-mongoose.connect('mongodb://127.0.0.1:27017/TapNGoDB')
   .then(() => console.log('MongoDB connected'))
   .catch((err) => {
     console.error('MongoDB connection error:', err.message);
     process.exit(1);  // Exit process with failure
   });
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
 
 // Default Route
 app.get('/', (req, res) => {

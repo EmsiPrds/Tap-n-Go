@@ -1,29 +1,12 @@
-<<<<<<< HEAD
-require("dotenv").config();
-const mongoose = require("mongoose");
-const Admin = require("./models/Admin");
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import Admin from './models/Admin.js';
 
 // Configuration
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/TapNGoDB";
 const DEFAULT_ADMIN_USERNAME = process.env.DEFAULT_ADMIN_USERNAME || "admin";
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "123";
-=======
-import { connect, disconnect } from 'mongoose';
-import bcrypt from 'bcryptjs'; // Default import for bcryptjs
-import Admin from './models/Admin.js';
-
-// Connect to MongoDB
-const connectToDb = async () => {
-    try {
-        await connect('mongodb://127.0.0.1:27017/TapNGoDB');
-        console.log('MongoDB connected');
-    } catch (err) {
-        console.log('MongoDB connection failed:', err);
-        process.exit(1); // Exit the process if DB connection fails
-    }
-};
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
 
 /**
  * Create default admin user
@@ -40,7 +23,6 @@ const createDefaultAdmin = async () => {
       username: DEFAULT_ADMIN_USERNAME,
     });
 
-<<<<<<< HEAD
     if (existingAdmin) {
       console.log(`✓ Admin user '${DEFAULT_ADMIN_USERNAME}' already exists`);
       console.log("  No action needed.");
@@ -77,34 +59,3 @@ const createDefaultAdmin = async () => {
 
 // Run the script
 createDefaultAdmin();
-=======
-    try {
-        const existingAdmin = await Admin.findOne({ username });
-        if (existingAdmin) {
-            console.log('Admin already exists');
-            return; // Exit if admin already exists
-        }
-
-        const hashedPassword = await bcrypt.hash(plainPassword, 10); // Using bcrypt.hash
-        const newAdmin = new Admin({
-            username: username,
-            password: hashedPassword
-        });
-
-        await newAdmin.save();
-        console.log('Admin created successfully');
-    } catch (err) {
-        console.log('Error creating admin:', err);
-    } finally {
-        // Disconnect from DB after operation is complete
-        disconnect();
-    }
-};
-
-const main = async () => {
-    await connectToDb();
-    await createAdmin();
-};
-
-main();
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00

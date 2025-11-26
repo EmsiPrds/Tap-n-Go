@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
+import jwt from 'jsonwebtoken';
+import Admin from '../models/Admin.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
@@ -13,7 +12,7 @@ if (!JWT_SECRET) {
  * Extract token from request
  * Checks Authorization header (Bearer token) or cookies
  */
-const extractToken = (req) => {
+export const extractToken = (req) => {
     // Check Authorization header
     const authHeader = req.header('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -23,22 +22,13 @@ const extractToken = (req) => {
     // Fallback to cookie
     return req.cookies?.accessToken || null;
 };
-=======
-// authMiddleware.js
-import jwt from 'jsonwebtoken';  // Default import for CommonJS modules
-
-const verifyToken = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
 
 /**
  * Verify JWT access token middleware
  * Attaches admin info to req.admin on success
  */
-const verifyToken = async (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
     try {
-<<<<<<< HEAD
         const token = extractToken(req);
 
         if (!token) {
@@ -105,7 +95,7 @@ const verifyToken = async (req, res, next) => {
  * Verify refresh token middleware
  * Used for refresh and logout endpoints
  */
-const verifyRefreshToken = async (req, res, next) => {
+export const verifyRefreshToken = async (req, res, next) => {
     try {
         const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
 
@@ -175,20 +165,3 @@ const verifyRefreshToken = async (req, res, next) => {
         });
     }
 };
-
-module.exports = {
-    verifyToken,
-    verifyRefreshToken,
-    extractToken
-};
-=======
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Access verify method from jwt
-        req.admin = decoded;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid token' });
-    }
-};
-
-export default verifyToken;
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00

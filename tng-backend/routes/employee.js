@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-const express = require('express');
-const Employee = require('../models/employee');
-const { verifyToken } = require('../middleware/authMiddleware');
-=======
 import { Router } from 'express';
-import Employee from '../models/employee.js';  // Only import the model
-import verifyToken from '../middleware/authMiddleware.js';
->>>>>>> d16eb7d84847a594d3ae5d1a73e4ecd32720bd00
+import Employee from '../models/employee.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
