@@ -1,5 +1,5 @@
 import { Fingerprint, LogIn } from "lucide-react";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,14 +10,14 @@ export function Login() {
   const [error, setError] = useState("");
   const { signIn } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       await signIn(username, password);
-    } catch (err) {
+    } catch {
       setError("Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
