@@ -1,5 +1,7 @@
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
+import { AuthRequest, JWTPayload } from '../types/index.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
@@ -12,7 +14,7 @@ if (!JWT_SECRET) {
  * Extract token from request
  * Checks Authorization header (Bearer token) or cookies
  */
-export const extractToken = (req) => {
+export const extractToken = (req: Request): string | null => {
     // Check Authorization header
     const authHeader = req.header('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -20,41 +22,44 @@ export const extractToken = (req) => {
     }
     
     // Fallback to cookie
-    return req.cookies?.accessToken || null;
+    return (req.cookies?.accessToken as string) || null;
 };
 
 /**
  * Verify JWT access token middleware
  * Attaches admin info to req.admin on success
  */
-export const verifyToken = async (req, res, next) => {
+export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const token = extractToken(req);
 
         if (!token) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Authentication required. No token provided.'
             });
+            return;
         }
 
         // Verify token
-        let decoded;
+        let decoded: JWTPayload;
         try {
-            decoded = jwt.verify(token, JWT_SECRET);
+            decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
         } catch (jwtError) {
-            if (jwtError.name === 'TokenExpiredError') {
-                return res.status(401).json({
+            if (jwtError instanceof Error && jwtError.name === 'TokenExpiredError') {
+                res.status(401).json({
                     success: false,
                     message: 'Token expired. Please refresh your token.',
                     code: 'TOKEN_EXPIRED'
                 });
-            } else if (jwtError.name === 'JsonWebTokenError') {
-                return res.status(401).json({
+                return;
+            } else if (jwtError instanceof Error && jwtError.name === 'JsonWebTokenError') {
+                res.status(401).json({
                     success: false,
                     message: 'Invalid token.',
                     code: 'INVALID_TOKEN'
                 });
+                return;
             }
             throw jwtError;
         }
@@ -62,17 +67,19 @@ export const verifyToken = async (req, res, next) => {
         // Verify admin still exists and is active
         const admin = await Admin.findById(decoded.id).select('username isActive');
         if (!admin) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid token. Admin not found.'
             });
+            return;
         }
 
         if (!admin.isActive) {
-            return res.status(403).json({
+            res.status(403).json({
                 success: false,
                 message: 'Account is deactivated.'
             });
+            return;
         }
 
         // Attach admin info to request
@@ -84,7 +91,7 @@ export const verifyToken = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Token verification error:', error);
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Authentication failed.'
         });
@@ -95,33 +102,36 @@ export const verifyToken = async (req, res, next) => {
  * Verify refresh token middleware
  * Used for refresh and logout endpoints
  */
-export const verifyRefreshToken = async (req, res, next) => {
+export const verifyRefreshToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
+        const refreshToken = (req.body.refreshToken as string) || (req.cookies?.refreshToken as string);
 
         if (!refreshToken) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Refresh token required.'
             });
+            return;
         }
 
         // Verify token
-        let decoded;
+        let decoded: JWTPayload;
         try {
-            decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+            decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET!) as JWTPayload;
         } catch (jwtError) {
-            if (jwtError.name === 'TokenExpiredError') {
-                return res.status(401).json({
+            if (jwtError instanceof Error && jwtError.name === 'TokenExpiredError') {
+                res.status(401).json({
                     success: false,
                     message: 'Refresh token expired. Please login again.',
                     code: 'REFRESH_TOKEN_EXPIRED'
                 });
+                return;
             }
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid refresh token.'
             });
+            return;
         }
 
         // Verify token exists in database and matches
@@ -129,24 +139,27 @@ export const verifyRefreshToken = async (req, res, next) => {
             .select('+refreshToken username isActive');
 
         if (!admin) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid refresh token. Admin not found.'
             });
+            return;
         }
 
         if (!admin.isActive) {
-            return res.status(403).json({
+            res.status(403).json({
                 success: false,
                 message: 'Account is deactivated.'
             });
+            return;
         }
 
         if (admin.refreshToken !== refreshToken) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid refresh token. Token mismatch.'
             });
+            return;
         }
 
         // Attach admin info to request
@@ -159,9 +172,10 @@ export const verifyRefreshToken = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Refresh token verification error:', error);
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Refresh token verification failed.'
         });
     }
 };
+

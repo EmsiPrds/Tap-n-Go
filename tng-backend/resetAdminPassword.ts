@@ -1,6 +1,6 @@
-require("dotenv").config();
-const mongoose = require("mongoose");
-const Admin = require("./models/Admin");
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import Admin from './models/Admin.js';
 
 // Configuration
 const MONGODB_URI =
@@ -12,7 +12,7 @@ const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "123";
  * Reset admin password
  * This script resets the admin password to ensure it's properly hashed
  */
-const resetAdminPassword = async () => {
+const resetAdminPassword = async (): Promise<void> => {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
@@ -47,7 +47,8 @@ const resetAdminPassword = async () => {
     await mongoose.disconnect();
     console.log("✓ Database connection closed");
   } catch (error) {
-    console.error("✗ Error resetting admin password:", error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error("✗ Error resetting admin password:", errorMessage);
     console.error(error);
     process.exit(1);
   }

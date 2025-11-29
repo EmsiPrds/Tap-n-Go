@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +20,8 @@ import type { DashboardStats } from "../types";
 export function Dashboard() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalPresent: 0,
     lateEmployees: 0,
@@ -34,8 +37,26 @@ export function Dashboard() {
     });
   }, []);
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      // Force page reload to redirect to login page
+      // This ensures a clean state and immediate redirect
+      window.location.reload();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setIsSigningOut(false);
+      setShowLogoutModal(false);
+    }
+  };
+
+  const handleCancelSignOut = () => {
+    setShowLogoutModal(false);
   };
 
   return (
@@ -61,7 +82,7 @@ export function Dashboard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleSignOut}
+                onClick={handleSignOutClick}
                 icon={<LogOutIcon className="w-4 h-4" />}
               >
                 Sign Out
@@ -227,6 +248,37 @@ export function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        isOpen={showLogoutModal}
+        onClose={handleCancelSignOut}
+        size="sm"
+        title="Confirm Sign Out"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to sign out? You'll need to log in again to access the dashboard.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="secondary"
+              onClick={handleCancelSignOut}
+              disabled={isSigningOut}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmSignOut}
+              loading={isSigningOut}
+              icon={<LogOutIcon className="w-4 h-4" />}
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

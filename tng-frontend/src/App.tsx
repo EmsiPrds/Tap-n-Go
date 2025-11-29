@@ -24,7 +24,12 @@ function Router() {
 
   useEffect(() => {
     if (!loading) {
-      setCurrentRoute(user ? "dashboard" : "login");
+      // Automatically redirect to dashboard when user logs in
+      if (user) {
+        setCurrentRoute("dashboard");
+      } else {
+        setCurrentRoute("login");
+      }
     }
 
     const handleNavigation = ((event: CustomEvent) => {
@@ -64,20 +69,56 @@ function Router() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [hasShownSplash, setHasShownSplash] = useState(() => {
+    // Check if splash has been shown before (stored in localStorage)
+    return localStorage.getItem('splashShown') === 'true';
+  });
 
   return (
     <AuthProvider>
-      {showSplash ? (
-        <SplashScreen
-          duration={3000}
-          onComplete={() => setShowSplash(false)}
+      {!hasShownSplash ? (
+        <SplashScreenWithAuth
+          onComplete={() => {
+            localStorage.setItem('splashShown', 'true');
+            setHasShownSplash(true);
+          }}
         />
       ) : (
         <Router />
       )}
     </AuthProvider>
   );
+}
+
+// Component that shows splash screen while loading authentication
+function SplashScreenWithAuth({ onComplete }: { onComplete: () => void }) {
+  const { loading } = useAuth();
+  const [minDisplayTime, setMinDisplayTime] = useState(true);
+  const [shouldFadeOut, setShouldFadeOut] = useState(false);
+
+  useEffect(() => {
+    // Ensure splash shows for at least 1.5 seconds for smooth animation
+    const timer = setTimeout(() => {
+      setMinDisplayTime(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Hide splash when loading is complete and minimum display time has passed
+    if (!loading && !minDisplayTime) {
+      // Trigger fade out
+      setShouldFadeOut(true);
+      // Complete after fade animation
+      const fadeTimer = setTimeout(() => {
+        onComplete();
+      }, 300);
+      return () => clearTimeout(fadeTimer);
+    }
+  }, [loading, minDisplayTime, onComplete]);
+
+  return <SplashScreen fadeOut={shouldFadeOut} />;
 }
 
 export default App;

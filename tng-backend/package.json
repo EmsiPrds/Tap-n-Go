@@ -1,10 +1,14 @@
 {
   "name": "tng-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "npx tsx server.ts",
+    "dev:watch": "nodemon --exec npx tsx server.ts",
+    "create-admin": "npx tsx createAdmin.ts",
+    "reset-admin": "npx tsx resetAdminPassword.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -24,7 +28,16 @@
     "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.6",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   },
   "type": "module"
 }

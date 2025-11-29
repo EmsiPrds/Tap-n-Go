@@ -12,7 +12,7 @@ const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "123";
  * Create default admin user
  * This script creates the default admin user if it doesn't exist
  */
-const createDefaultAdmin = async () => {
+const createDefaultAdmin = async (): Promise<void> => {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
@@ -49,8 +49,9 @@ const createDefaultAdmin = async () => {
     await mongoose.disconnect();
     console.log("✓ Database connection closed");
   } catch (error) {
-    console.error("✗ Error creating admin user:", error.message);
-    if (error.code === 11000) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error("✗ Error creating admin user:", errorMessage);
+    if (error instanceof Error && 'code' in error && error.code === 11000) {
       console.error("  Admin user already exists (duplicate key error)");
     }
     process.exit(1);
@@ -59,3 +60,4 @@ const createDefaultAdmin = async () => {
 
 // Run the script
 createDefaultAdmin();
+

@@ -5,31 +5,48 @@ import animationFile from '../assets/Tap-n-Go.lottie?url';
 interface SplashScreenProps {
   onComplete?: () => void;
   duration?: number;
+  fadeOut?: boolean;
 }
 
-export function SplashScreen({ onComplete, duration = 2500 }: SplashScreenProps) {
+export function SplashScreen({ onComplete, duration, fadeOut: externalFadeOut }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    // Start fade out animation before hiding
-    const fadeTimer = setTimeout(() => {
-      setFadeOut(true);
-    }, duration - 300); // Start fade 300ms before completion
-
-    // Hide splash screen after duration
-    const hideTimer = setTimeout(() => {
-      setIsVisible(false);
-      if (onComplete) {
-        onComplete();
+    // If external fadeOut is controlled, use it
+    if (externalFadeOut !== undefined) {
+      setFadeOut(externalFadeOut);
+      if (externalFadeOut) {
+        const hideTimer = setTimeout(() => {
+          setIsVisible(false);
+          if (onComplete) {
+            onComplete();
+          }
+        }, 300);
+        return () => clearTimeout(hideTimer);
       }
-    }, duration);
+      return;
+    }
 
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(hideTimer);
-    };
-  }, [duration, onComplete]);
+    // Fallback to duration-based fade if no external control
+    if (duration) {
+      const fadeTimer = setTimeout(() => {
+        setFadeOut(true);
+      }, duration - 300);
+
+      const hideTimer = setTimeout(() => {
+        setIsVisible(false);
+        if (onComplete) {
+          onComplete();
+        }
+      }, duration);
+
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(hideTimer);
+      };
+    }
+  }, [duration, onComplete, externalFadeOut]);
 
   if (!isVisible) return null;
 

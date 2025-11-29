@@ -1,9 +1,10 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import { verifyRefreshToken, extractToken } from '../middleware/authMiddleware.js';
+import { AuthRequest, JWTPayload } from '../types/index.js';
 
 const router = express.Router();
 
@@ -19,8 +20,8 @@ if (!JWT_SECRET) {
 
 // Rate limiting configuration
 const loginLimiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 5, // 5 requests per window
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5'), // 5 requests per window
     message: {
         success: false,
         message: 'Too many login attempts. Please try again later.'
@@ -42,14 +43,14 @@ const refreshLimiter = rateLimit({
 /**
  * Generate JWT tokens
  */
-const generateTokens = (adminId) => {
-    const payload = { id: adminId };
+const generateTokens = (adminId: string): { accessToken: string; refreshToken: string } => {
+    const payload: JWTPayload = { id: adminId };
 
     const accessToken = jwt.sign(payload, JWT_SECRET, {
         expiresIn: ACCESS_TOKEN_EXPIRY
     });
 
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET!, {
         expiresIn: REFRESH_TOKEN_EXPIRY
     });
 
@@ -59,13 +60,13 @@ const generateTokens = (adminId) => {
 /**
  * Set secure cookies for tokens
  */
-const setTokenCookies = (res, accessToken, refreshToken) => {
+const setTokenCookies = (res: Response, accessToken: string, refreshToken: string): void => {
     const isProduction = process.env.NODE_ENV === 'production';
     
     const cookieOptions = {
         httpOnly: true,
         secure: isProduction,
-        sameSite: isProduction ? 'strict' : 'lax',
+        sameSite: (isProduction ? 'strict' : 'lax') as 'strict' | 'lax',
     };
 
     // Access token cookie (15 minutes)
@@ -97,7 +98,7 @@ router.post('/login',
             .notEmpty().withMessage('Password is required')
             .isLength({ min: 3 }).withMessage('Password must be at least 3 characters')
     ],
-    async (req, res) => {
+    async (req: Request, res: Response): Promise<void> => {
         try {
             console.log('Login attempt received:', { 
                 username: req.body.username, 
@@ -108,17 +109,18 @@ router.post('/login',
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 console.log('Validation errors:', errors.array());
-                return res.status(400).json({
+                res.status(400).json({
                     success: false,
                     message: 'Validation failed',
                     errors: errors.array().map(err => ({
-                        field: err.path,
+                        field: err.type === 'field' ? err.path : 'unknown',
                         message: err.msg
                     }))
                 });
+                return;
             }
 
-            const { username, password } = req.body;
+            const { username, password } = req.body as { username: string; password: string };
             const normalizedUsername = username.trim().toLowerCase();
             console.log('Normalized username:', normalizedUsername);
 
@@ -130,27 +132,30 @@ router.post('/login',
             if (!admin) {
                 // Use generic message to prevent username enumeration
                 console.log(`Login attempt with non-existent username: ${normalizedUsername}`);
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: 'Invalid username or password'
                 });
+                return;
             }
 
             // Check if account is locked
             if (admin.isLocked) {
-                const lockTime = Math.ceil((admin.lockUntil - Date.now()) / 1000 / 60);
-                return res.status(423).json({
+                const lockTime = Math.ceil((admin.lockUntil!.getTime() - Date.now()) / 1000 / 60);
+                res.status(423).json({
                     success: false,
                     message: `Account is temporarily locked. Please try again in ${lockTime} minutes.`
                 });
+                return;
             }
 
             // Check if account is active
             if (!admin.isActive) {
-                return res.status(403).json({
+                res.status(403).json({
                     success: false,
                     message: 'Account is deactivated. Please contact administrator.'
                 });
+                return;
             }
 
             // Verify password
@@ -163,10 +168,11 @@ router.post('/login',
                 await admin.incLoginAttempts();
                 
                 console.log(`Failed login attempt for username: ${normalizedUsername} - Password mismatch`);
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     message: 'Invalid username or password'
                 });
+                return;
             }
             
             console.log('Login successful for username:', normalizedUsername);
@@ -176,7 +182,7 @@ router.post('/login',
             admin.lastLogin = new Date();
             
             // Generate tokens
-            const { accessToken, refreshToken } = generateTokens(admin._id);
+            const { accessToken, refreshToken } = generateTokens(admin._id.toString());
             
             // Save refresh token to database
             admin.refreshToken = refreshToken;
@@ -215,17 +221,17 @@ router.post('/login',
 router.post('/refresh',
     refreshLimiter,
     verifyRefreshToken,
-    async (req, res) => {
+    async (req: AuthRequest, res: Response): Promise<void> => {
         try {
             // Generate new access token
-            const { accessToken } = generateTokens(req.admin.id);
+            const { accessToken } = generateTokens(req.admin!.id);
 
             // Update access token cookie
             const isProduction = process.env.NODE_ENV === 'production';
             res.cookie('accessToken', accessToken, {
                 httpOnly: true,
                 secure: isProduction,
-                sameSite: isProduction ? 'strict' : 'lax',
+                sameSite: (isProduction ? 'strict' : 'lax') as 'strict' | 'lax',
                 maxAge: 15 * 60 * 1000 // 15 minutes
             });
 
@@ -252,22 +258,23 @@ router.post('/refresh',
  */
 router.post('/logout',
     verifyRefreshToken,
-    async (req, res) => {
+    async (req: AuthRequest, res: Response): Promise<void> => {
         try {
             // Clear refresh token from database
-            await Admin.findByIdAndUpdate(req.admin.id, {
+            await Admin.findByIdAndUpdate(req.admin!.id, {
                 $unset: { refreshToken: 1 }
             });
 
             // Clear cookies
+            const isProduction = process.env.NODE_ENV === 'production';
             res.clearCookie('accessToken', {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
+                secure: isProduction,
                 sameSite: 'strict'
             });
             res.clearCookie('refreshToken', {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
+                secure: isProduction,
                 sameSite: 'strict'
             });
 
@@ -289,36 +296,39 @@ router.post('/logout',
  * GET /api/auth/verify
  * Verify token validity and return admin info
  */
-router.get('/verify', async (req, res) => {
+router.get('/verify', async (req: Request, res: Response): Promise<void> => {
     try {
         const token = extractToken(req);
 
         if (!token) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'No token provided'
             });
+            return;
         }
 
         // Verify token
-        let decoded;
+        let decoded: JWTPayload;
         try {
-            decoded = jwt.verify(token, JWT_SECRET);
+            decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
         } catch (error) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid or expired token'
             });
+            return;
         }
 
         // Get admin info
         const admin = await Admin.findById(decoded.id).select('username isActive');
         
         if (!admin || !admin.isActive) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid token or account deactivated'
             });
+            return;
         }
 
         res.json({
@@ -343,34 +353,37 @@ router.get('/verify', async (req, res) => {
  * GET /api/auth/me
  * Get current authenticated admin info
  */
-router.get('/me', async (req, res) => {
+router.get('/me', async (req: Request, res: Response): Promise<void> => {
     try {
         const token = extractToken(req);
 
         if (!token) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Authentication required'
             });
+            return;
         }
 
-        let decoded;
+        let decoded: JWTPayload;
         try {
-            decoded = jwt.verify(token, JWT_SECRET);
+            decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
         } catch (error) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid or expired token'
             });
+            return;
         }
 
         const admin = await Admin.findById(decoded.id).select('username lastLogin createdAt');
         
         if (!admin) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'Admin not found'
             });
+            return;
         }
 
         res.json({
@@ -394,3 +407,4 @@ router.get('/me', async (req, res) => {
 });
 
 export default router;
+

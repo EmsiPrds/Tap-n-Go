@@ -1,7 +1,8 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { IAdmin } from '../types/index.js';
 
-const adminSchema = new mongoose.Schema({
+const adminSchema = new Schema<IAdmin>({
     username: {
         type: String,
         required: [true, 'Username is required'],
@@ -69,7 +70,7 @@ adminSchema.pre('save', async function(next) {
         this.password = await bcrypt.hash(this.password, saltRounds);
         next();
     } catch (error) {
-        next(error);
+        next(error as Error);
     }
 });
 
@@ -79,7 +80,7 @@ adminSchema.virtual('isLocked').get(function() {
 });
 
 // Instance method to compare password
-adminSchema.methods.comparePassword = async function(candidatePassword) {
+adminSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
     try {
         // If password is not loaded, fetch it
         if (!this.password) {
@@ -103,7 +104,7 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Instance method to increment login attempts
-adminSchema.methods.incLoginAttempts = async function() {
+adminSchema.methods.incLoginAttempts = async function(): Promise<IAdmin> {
     // If we have a previous lock that has expired, restart at 1
     if (this.lockUntil && this.lockUntil < Date.now()) {
         this.loginAttempts = 1;
@@ -115,19 +116,20 @@ adminSchema.methods.incLoginAttempts = async function() {
     
     // Lock account after 5 failed attempts for 2 hours
     if (this.loginAttempts >= 5 && !this.isLocked) {
-        this.lockUntil = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+        this.lockUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
     }
     
     return await this.save();
 };
 
 // Instance method to reset login attempts
-adminSchema.methods.resetLoginAttempts = async function() {
+adminSchema.methods.resetLoginAttempts = async function(): Promise<IAdmin> {
     this.loginAttempts = 0;
     this.lockUntil = undefined;
     return await this.save();
 };
 
-const Admin = mongoose.model('Admin', adminSchema);
+const Admin: Model<IAdmin> = mongoose.model<IAdmin>('Admin', adminSchema);
 
 export default Admin;
+

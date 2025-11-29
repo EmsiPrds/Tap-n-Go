@@ -36,16 +36,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (username: string, password: string) => {
-    const { error } = await database.auth.signInWithPassword({
+    const { data, error } = await database.auth.signInWithPassword({
       username,
       password,
     });
     if (error) throw error;
+    
+    // Update user state immediately after successful login
+    if (data?.admin) {
+      setUser({
+        id: data.admin.id,
+        username: data.admin.username,
+      });
+    }
   };
 
   const signOut = async () => {
     const { error } = await database.auth.signOut();
     if (error) throw error;
+    
+    // Clear user state immediately after successful logout
+    setUser(null);
   };
 
   return (
