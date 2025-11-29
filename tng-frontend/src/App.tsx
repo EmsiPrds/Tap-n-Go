@@ -7,6 +7,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { EmployeeSelection } from "./pages/EmployeeSelection";
 import { Login } from "./pages/Login";
 import { TapInterface } from "./pages/TapInterface";
+import { SplashScreen } from "./components/SplashScreen";
 
 type Route =
   | "login"
@@ -63,9 +64,18 @@ function Router() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <AuthProvider>
-      <Router />
+      {showSplash ? (
+        <SplashScreen
+          duration={3000}
+          onComplete={() => setShowSplash(false)}
+        />
+      ) : (
+        <Router />
+      )}
     </AuthProvider>
   );
 }

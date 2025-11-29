@@ -8,3 +8,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Declare module for .lottie files
+declare module '*.lottie' {
+  const src: string;
+  export default src;
+}
