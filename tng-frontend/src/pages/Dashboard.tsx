@@ -45,9 +45,8 @@ export function Dashboard() {
     setIsSigningOut(true);
     try {
       await signOut();
-      // Force page reload to redirect to login page
-      // This ensures a clean state and immediate redirect
-      window.location.reload();
+      // User state will be cleared, Router will automatically redirect to login
+      setShowLogoutModal(false);
     } catch (error) {
       console.error("Sign out error:", error);
       setIsSigningOut(false);

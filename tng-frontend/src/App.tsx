@@ -18,6 +18,12 @@ type Route =
   | "analytics"
   | "audit";
 
+// Wrapper component to force remount on user change
+function RouterWithKey() {
+  const { user } = useAuth();
+  return <Router key={user ? `user-${user.id}` : 'no-user'} />;
+}
+
 function Router() {
   const { user, loading } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<Route>("login");
@@ -26,19 +32,28 @@ function Router() {
     if (!loading) {
       // Automatically redirect to dashboard when user logs in
       if (user) {
-        setCurrentRoute("dashboard");
+        // Only set dashboard if not already on a route
+        setCurrentRoute((prevRoute) => {
+          if (prevRoute === "login") {
+            return "dashboard";
+          }
+          return prevRoute;
+        });
       } else {
+        // Immediately reset to login when user logs out
         setCurrentRoute("login");
       }
     }
+  }, [user, loading]);
 
+  useEffect(() => {
     const handleNavigation = ((event: CustomEvent) => {
       setCurrentRoute(event.detail as Route);
     }) as EventListener;
 
     window.addEventListener("navigate", handleNavigation);
     return () => window.removeEventListener("navigate", handleNavigation);
-  }, [user, loading]);
+  }, []);
 
   if (loading) {
     return (
@@ -48,7 +63,10 @@ function Router() {
     );
   }
 
-  if (!user) return <Login />;
+  // Immediately show login if no user - this check happens on every render
+  if (!user) {
+    return <Login />;
+  }
 
   switch (currentRoute) {
     case "dashboard":
@@ -84,7 +102,7 @@ function App() {
           }}
         />
       ) : (
-        <Router />
+        <RouterWithKey />
       )}
     </AuthProvider>
   );

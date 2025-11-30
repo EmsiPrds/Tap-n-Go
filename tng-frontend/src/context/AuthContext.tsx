@@ -52,11 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await database.auth.signOut();
-    if (error) throw error;
-    
-    // Clear user state immediately after successful logout
+    // Clear user state immediately to trigger Router redirect
     setUser(null);
+    
+    // Then perform the actual logout API call
+    const { error } = await database.auth.signOut();
+    if (error) {
+      // If logout fails, we still want to keep user as null
+      // since tokens are cleared anyway
+      console.error("Logout error:", error);
+    }
   };
 
   return (
