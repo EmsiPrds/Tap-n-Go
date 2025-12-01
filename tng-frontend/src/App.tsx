@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Analytics } from "./pages/Analytics";
+import { AddEmployee } from "./pages/AddEmployee";
 import { AttendanceSummary } from "./pages/AttendanceSummary";
 import { AuditTrail } from "./pages/AuditTrail";
 import { Dashboard } from "./pages/Dashboard";
@@ -13,6 +14,7 @@ type Route =
   | "login"
   | "dashboard"
   | "employees"
+  | "add-employee"
   | "tap"
   | "attendance"
   | "analytics"
@@ -73,6 +75,8 @@ function Router() {
       return <Dashboard />;
     case "employees":
       return <EmployeeSelection />;
+    case "add-employee":
+      return <AddEmployee />;
     case "tap":
       return <TapInterface />;
     case "attendance":

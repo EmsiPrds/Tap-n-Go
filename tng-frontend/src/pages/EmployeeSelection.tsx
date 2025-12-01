@@ -1,66 +1,60 @@
 import { ArrowLeft, Grid, List, QrCode, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useNavigate } from "../hooks/useNavigate";
+import api from "../services/api";
 import type { Employee } from "../types";
-
-const mockEmployees: Employee[] = [
-  {
-    id: "1",
-    employee_id: "EMP001",
-    first_name: "John",
-    last_name: "Doe",
-    email: "john.doe@company.com",
-    department: "Engineering",
-    position: "Senior Developer",
-    shift_start: "09:00",
-    shift_end: "18:00",
-    status: "active",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    employee_id: "EMP002",
-    first_name: "Jane",
-    last_name: "Smith",
-    email: "jane.smith@company.com",
-    department: "Marketing",
-    position: "Marketing Manager",
-    shift_start: "09:00",
-    shift_end: "18:00",
-    status: "active",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    employee_id: "EMP003",
-    first_name: "Michael",
-    last_name: "Johnson",
-    email: "michael.johnson@company.com",
-    department: "Sales",
-    position: "Sales Executive",
-    shift_start: "08:00",
-    shift_end: "17:00",
-    status: "active",
-    created_at: new Date().toISOString(),
-  },
-];
 
 export function EmployeeSelection() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [employees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/employees");
+        if (response.data.success && Array.isArray(response.data.data)) {
+          // Filter out any invalid employee objects and ensure they have required fields
+          const validEmployees = response.data.data.filter(
+            (emp: any) => emp && emp.id && emp.employee_id
+          );
+          setEmployees(validEmployees);
+        } else {
+          setEmployees([]);
+        }
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+        setEmployees([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const filteredEmployees = employees.filter((emp) => {
+    if (!emp || emp.status !== "active") return false;
+
+    const query = searchQuery.toLowerCase();
+    const firstName = emp.first_name?.toLowerCase() || "";
+    const lastName = emp.last_name?.toLowerCase() || "";
+    const employeeId = emp.employee_id?.toLowerCase() || "";
+    const department = emp.department?.toLowerCase() || "";
+
+    return (
+      firstName.includes(query) ||
+      lastName.includes(query) ||
+      employeeId.includes(query) ||
+      department.includes(query)
+    );
+  });
 
   const handleSelectEmployee = (employee: Employee) => {
     navigate(`/tap/${employee.id}`);
@@ -132,93 +126,114 @@ export function EmployeeSelection() {
           </div>
         </div>
 
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            Found {filteredEmployees.length}{" "}
-            {filteredEmployees.length === 1 ? "employee" : "employees"}
-          </p>
-        </div>
-
-        {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredEmployees.map((employee) => (
-              <button
-                key={employee.id}
-                onClick={() => handleSelectEmployee(employee)}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-300 transition-all duration-200 text-left active:scale-95"
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <Avatar
-                    size="lg"
-                    fallback={`${employee.first_name[0]}${employee.last_name[0]}`}
-                    src={employee.avatar_url}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
-                      {employee.first_name} {employee.last_name}
-                    </h3>
-                    <p className="text-sm text-gray-500 truncate">
-                      {employee.employee_id}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-xs text-gray-500">Department</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {employee.department}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Position</p>
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {employee.position}
-                    </p>
-                  </div>
-                  <StatusBadge status={employee.status} size="sm" />
-                </div>
-              </button>
-            ))}
+        {loading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading employees...</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
-            {filteredEmployees.map((employee) => (
-              <button
-                key={employee.id}
-                onClick={() => handleSelectEmployee(employee)}
-                className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center gap-4"
-              >
-                <Avatar
-                  size="lg"
-                  fallback={`${employee.first_name[0]}${employee.last_name[0]}`}
-                  src={employee.avatar_url}
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900">
-                    {employee.first_name} {employee.last_name}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {employee.employee_id}
-                  </p>
-                </div>
-                <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {employee.department}
-                  </p>
-                  <p className="text-sm text-gray-500">{employee.position}</p>
-                </div>
-                <StatusBadge status={employee.status} size="sm" />
-              </button>
-            ))}
-          </div>
-        )}
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                Found {filteredEmployees.length}{" "}
+                {filteredEmployees.length === 1 ? "employee" : "employees"}
+              </p>
+            </div>
 
-        {filteredEmployees.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <p className="text-gray-500">
-              No employees found matching your search.
-            </p>
-          </div>
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredEmployees.map((employee) => (
+                  <button
+                    key={employee.id}
+                    onClick={() => handleSelectEmployee(employee)}
+                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-300 transition-all duration-200 text-left active:scale-95"
+                  >
+                    <div className="flex items-start gap-4 mb-4">
+                      <Avatar
+                        size="lg"
+                        fallback={
+                          employee.first_name && employee.last_name
+                            ? `${employee.first_name[0]}${employee.last_name[0]}`
+                            : employee.employee_id?.slice(0, 2).toUpperCase() ||
+                              "EM"
+                        }
+                        src={employee.avatar_url}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {employee.first_name || ""} {employee.last_name || ""}
+                        </h3>
+                        <p className="text-sm text-gray-500 truncate">
+                          {employee.employee_id || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Department</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {employee.department || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Position</p>
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {employee.position || "N/A"}
+                        </p>
+                      </div>
+                      <StatusBadge status={employee.status} size="sm" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+                {filteredEmployees.map((employee) => (
+                  <button
+                    key={employee.id}
+                    onClick={() => handleSelectEmployee(employee)}
+                    className="w-full p-4 hover:bg-gray-50 transition-colors text-left flex items-center gap-4"
+                  >
+                    <Avatar
+                      size="lg"
+                      fallback={
+                        employee.first_name && employee.last_name
+                          ? `${employee.first_name[0]}${employee.last_name[0]}`
+                          : employee.employee_id?.slice(0, 2).toUpperCase() ||
+                            "EM"
+                      }
+                      src={employee.avatar_url}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900">
+                        {employee.first_name || ""} {employee.last_name || ""}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {employee.employee_id || "N/A"}
+                      </p>
+                    </div>
+                    <div className="hidden sm:block text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {employee.department || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {employee.position || "N/A"}
+                      </p>
+                    </div>
+                    <StatusBadge status={employee.status} size="sm" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {filteredEmployees.length === 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                <p className="text-gray-500">
+                  No employees found matching your search.
+                </p>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

@@ -1,60 +1,49 @@
 import { ArrowLeft, Calendar, Download, Filter, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useNavigate } from "../hooks/useNavigate";
+import api from "../services/api";
 import type { AttendanceRecord } from "../types";
-
-const mockRecords: AttendanceRecord[] = [
-  {
-    id: "1",
-    employee_id: "EMP001",
-    date: "2025-11-26",
-    time_in: "09:00:00",
-    break_out: "12:00:00",
-    break_in: "13:00:00",
-    time_out: "18:00:00",
-    status: "present",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    employee_id: "EMP002",
-    date: "2025-11-26",
-    time_in: "09:15:00",
-    break_out: "12:00:00",
-    break_in: "13:00:00",
-    time_out: "18:05:00",
-    status: "late",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    employee_id: "EMP003",
-    date: "2025-11-26",
-    status: "absent",
-    created_at: new Date().toISOString(),
-  },
-];
 
 export function AttendanceSummary() {
   const navigate = useNavigate();
-  const [records] = useState<AttendanceRecord[]>(mockRecords);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState(
     new Date().toISOString().split("T")[0]
   );
 
+  useEffect(() => {
+    const fetchAttendanceRecords = async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({
+          date: dateFilter,
+          status: filterStatus !== "all" ? filterStatus : "",
+        });
+        const response = await api.get(`/attendance?${params.toString()}`);
+        if (response.data.success) {
+          setRecords(response.data.data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching attendance records:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAttendanceRecords();
+  }, [dateFilter, filterStatus]);
+
   const filteredRecords = records.filter((record) => {
-    const matchesSearch = record.employee_id
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || record.status === filterStatus;
-    const matchesDate = record.date === dateFilter;
-    return matchesSearch && matchesStatus && matchesDate;
+    const matchesSearch =
+      record.employee_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      false;
+    return matchesSearch;
   });
 
   const handleDownloadDTR = () => {
@@ -170,12 +159,23 @@ export function AttendanceSummary() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <Avatar size="sm" fallback="JD" />
+                        <Avatar
+                          size="sm"
+                          fallback={
+                            (record as any).employee_name
+                              ?.split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase() || "EM"
+                          }
+                        />
                         <div>
                           <p className="text-sm font-medium text-gray-900">
                             {record.employee_id}
                           </p>
-                          <p className="text-xs text-gray-500">John Doe</p>
+                          <p className="text-xs text-gray-500">
+                            {(record as any).employee_name || "Unknown"}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -203,13 +203,17 @@ export function AttendanceSummary() {
             </table>
           </div>
 
-          {filteredRecords.length === 0 && (
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading attendance records...</p>
+            </div>
+          ) : filteredRecords.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">
                 No records found matching your filters.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-6 flex items-center justify-between">

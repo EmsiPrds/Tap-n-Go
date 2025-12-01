@@ -31,8 +31,16 @@ export interface IAdmin extends Document {
 // Employee interface
 export interface IEmployee extends Document {
   _id: Types.ObjectId;
-  name: string;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  department: string;
   position: string;
+  avatar_url?: string;
+  shift_start: string;
+  shift_end: string;
+  status: "active" | "inactive";
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -42,8 +50,12 @@ export interface ITimeLog extends Document {
   _id: Types.ObjectId;
   employeeId: Types.ObjectId;
   timeIn?: Date;
+  breakOut?: Date;
+  breakIn?: Date;
   timeOut?: Date;
   date: Date;
+  status?: "present" | "late" | "absent" | "on-break";
+  notes?: string;
   photoVerification?: string;
   createdAt?: Date;
   updatedAt?: Date;

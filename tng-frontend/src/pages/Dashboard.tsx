@@ -1,20 +1,22 @@
+import Avatar from "avatox";
 import {
   BarChart3,
   Clock,
   Coffee,
   FileText,
   LogOut as LogOutIcon,
+  Plus,
   UserPlus,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "../hooks/useNavigate";
+import api from "../services/api";
 import type { DashboardStats } from "../types";
 
 export function Dashboard() {
@@ -22,19 +24,48 @@ export function Dashboard() {
   const { signOut, user } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalPresent: 0,
     lateEmployees: 0,
     onBreak: 0,
     timedOut: 0,
   });
+  const [summary, setSummary] = useState({
+    totalEmployees: 0,
+    present: 0,
+    absent: 0,
+    attendanceRate: 0,
+  });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
   useEffect(() => {
-    setStats({
-      totalPresent: 47,
-      lateEmployees: 3,
-      onBreak: 8,
-      timedOut: 12,
-    });
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [statsRes, summaryRes, activityRes] = await Promise.all([
+          api.get("/dashboard/stats"),
+          api.get("/dashboard/summary"),
+          api.get("/dashboard/recent-activity?limit=5"),
+        ]);
+
+        if (statsRes.data.success) {
+          setStats(statsRes.data.data);
+        }
+        if (summaryRes.data.success) {
+          setSummary(summaryRes.data.data);
+        }
+        if (activityRes.data.success) {
+          setRecentActivity(activityRes.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   const handleSignOutClick = () => {
@@ -75,8 +106,9 @@ export function Dashboard() {
 
             <div className="flex items-center gap-3">
               <Avatar
+                key={user?.id}
+                name={user?.username || "Unknown"}
                 size="md"
-                fallback={user?.username?.slice(0, 2).toUpperCase() || "HR"}
               />
               <Button
                 variant="ghost"
@@ -96,7 +128,9 @@ export function Dashboard() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Welcome back!
           </h2>
-          <p className="text-gray-600">Here's what's happening today</p>
+          <p className="text-gray-600">
+            Here&apos;s what&apos;s happening today
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -147,6 +181,15 @@ export function Dashboard() {
                 <Button
                   variant="secondary"
                   size="lg"
+                  icon={<Plus className="w-5 h-5" />}
+                  onClick={() => navigate("/add-employee")}
+                  className="w-full justify-start"
+                >
+                  Add Employee
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="lg"
                   icon={<FileText className="w-5 h-5" />}
                   onClick={() => navigate("/attendance")}
                   className="w-full justify-start"
@@ -179,23 +222,58 @@ export function Dashboard() {
                 Recent Activity
               </h3>
               <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <Avatar size="md" fallback="JD" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        John Doe
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Tapped in at 09:00 AM
-                      </p>
-                    </div>
-                    <StatusBadge status="present" size="sm" />
+                {loading ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Loading...
                   </div>
-                ))}
+                ) : recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Avatar
+                        key={activity.employee?.id}
+                        name={activity.employee?.name || "Unknown"}
+                        size="lg"
+                        className="bg-black"
+                        color="blue"
+                        borderColor="blue"
+                        borderWidth={2}
+                        borderRadius={10}
+                        borderStyle="solid"
+                        borderOpacity={0.5}
+                        borderShadow="sm"
+                        borderShadowColor="blue"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {activity.employee?.name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Tapped in at{" "}
+                          {activity.time_in
+                            ? new Date(activity.time_in).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        status={activity.status || "present"}
+                        size="sm"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No recent activity
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -203,29 +281,31 @@ export function Dashboard() {
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Today's Summary
+                Today&apos;s Summary
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Employees</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    70
+                    {loading ? "-" : summary.totalEmployees}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Present</span>
                   <span className="text-sm font-semibold text-green-600">
-                    47
+                    {loading ? "-" : summary.present}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Absent</span>
-                  <span className="text-sm font-semibold text-red-600">11</span>
+                  <span className="text-sm font-semibold text-red-600">
+                    {loading ? "-" : summary.absent}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Attendance Rate</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    87%
+                    {loading ? "-" : `${summary.attendanceRate}%`}
                   </span>
                 </div>
               </div>
@@ -257,7 +337,8 @@ export function Dashboard() {
       >
         <div className="space-y-4">
           <p className="text-gray-600">
-            Are you sure you want to sign out? You'll need to log in again to access the dashboard.
+            Are you sure you want to sign out? You&apos;ll need to log in again
+            to access the dashboard.
           </p>
           <div className="flex gap-3 justify-end">
             <Button

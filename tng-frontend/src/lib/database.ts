@@ -46,7 +46,18 @@ async function getSession(): Promise<{
       };
     }
     return { data: { session: null } };
-  } catch (error) {
+  } catch (error: any) {
+    // Silently handle 401 errors - they're expected when there's no valid session
+    if (error.response?.status === 401) {
+      // Clear invalid tokens
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      return { data: { session: null } };
+    }
+    // Only log unexpected errors
+    if (error.response?.status !== 401) {
+      console.error("Error getting session:", error);
+    }
     return { data: { session: null } };
   }
 }

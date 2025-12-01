@@ -9,6 +9,9 @@ const api = axios.create({
   },
 });
 
+// Track endpoints that are expected to return 401 (for suppressing console errors)
+const EXPECTED_401_ENDPOINTS = ['/auth/verify'];
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -29,7 +32,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip token refresh for auth endpoints and if already retried
+    const isAuthEndpoint = originalRequest.url?.includes("/auth/");
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
       try {
@@ -39,17 +44,19 @@ api.interceptors.response.use(
             refreshToken,
           });
 
-          const { token } = response.data.data;
-          localStorage.setItem("authToken", token);
+          if (response.data.success && response.data.data.accessToken) {
+            const accessToken = response.data.data.accessToken;
+            localStorage.setItem("authToken", accessToken);
 
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return api(originalRequest);
+          }
         }
       } catch (refreshError) {
+        // Refresh failed - clear tokens and let the request fail
         localStorage.removeItem("authToken");
         localStorage.removeItem("refreshToken");
-        window.location.href = "/";
-        return Promise.reject(refreshError);
+        // Don't redirect here - let the calling code handle it
       }
     }
 

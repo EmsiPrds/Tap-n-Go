@@ -6,6 +6,9 @@ import cors, { CorsOptions } from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employee.js';
+import dashboardRoutes from './routes/dashboard.js';
+import attendanceRoutes from './routes/attendance.js';
+import tapRoutes from './routes/tap.js';
 
 const app = express();
 
@@ -32,6 +35,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/tap', tapRoutes);
 
 // MongoDB Connection
 const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/TapNGoDB';
