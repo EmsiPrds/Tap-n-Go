@@ -237,14 +237,6 @@ export function Dashboard() {
                         name={activity.employee?.name || "Unknown"}
                         size="lg"
                         className="bg-black"
-                        color="blue"
-                        borderColor="blue"
-                        borderWidth={2}
-                        borderRadius={10}
-                        borderStyle="solid"
-                        borderOpacity={0.5}
-                        borderShadow="sm"
-                        borderShadowColor="blue"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
